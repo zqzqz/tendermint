@@ -1008,6 +1008,9 @@ func (cs *ConsensusState) isProposalComplete() bool {
 // Returns nil block upon error.
 // NOTE: keep it side-effect free for clarity.
 func (cs *ConsensusState) createProposalBlock() (block *types.Block, blockParts *types.PartSet) {
+
+	cs.Logger.Error("Edit: createProposalBlock")
+
 	var commit *types.Commit
 	switch {
 	case cs.Height == 1:
