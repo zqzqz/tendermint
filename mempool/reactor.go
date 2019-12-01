@@ -14,6 +14,9 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/types"
+
+	// Edit
+	"github.com/tendermint/tendermint/dag"
 )
 
 const (
@@ -38,6 +41,7 @@ type Reactor struct {
 	config  *cfg.MempoolConfig
 	mempool *CListMempool
 	ids     *mempoolIDs
+	dag     *dag.DAGGraph
 }
 
 type mempoolIDs struct {
@@ -114,6 +118,11 @@ func NewReactor(config *cfg.MempoolConfig, mempool *CListMempool) *Reactor {
 	return memR
 }
 
+// Edit
+func (memR *Reactor) SetDAGGraph(dag *dag.DAGGraph) {
+	memR.dag = dag
+}
+
 // SetLogger sets the Logger on the reactor and the underlying mempool.
 func (memR *Reactor) SetLogger(l log.Logger) {
 	memR.Logger = l
@@ -169,6 +178,9 @@ func (memR *Reactor) Receive(chID byte, src p2p.Peer, msgBytes []byte) {
 		if src != nil {
 			txInfo.SenderP2PID = src.ID()
 		}
+
+		memR.Logger.Error("Edit: Receive Tx Message")
+
 		err := memR.mempool.CheckTx(msg.Tx, nil, txInfo)
 		if err != nil {
 			memR.Logger.Info("Could not check tx", "tx", txID(msg.Tx), "err", err)

@@ -94,6 +94,8 @@ func (blockExec *BlockExecutor) CreateProposalBlock(
 	proposerAddr []byte,
 ) (*types.Block, *types.PartSet) {
 
+	blockExec.logger.Error("Edit: CreateProposalBlock")
+
 	maxBytes := state.ConsensusParams.Block.MaxBytes
 	maxGas := state.ConsensusParams.Block.MaxGas
 

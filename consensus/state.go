@@ -8,6 +8,9 @@ import (
 	"sync"
 	"time"
 
+	// Edit
+	"github.com/tendermint/tendermint/dag"
+
 	"github.com/pkg/errors"
 
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -133,6 +136,9 @@ type ConsensusState struct {
 
 	// for reporting metrics
 	metrics *Metrics
+
+	// Edit
+	dag *dag.DAGGraph
 }
 
 // StateOption sets an optional parameter on the ConsensusState.
@@ -179,6 +185,10 @@ func NewConsensusState(
 		option(cs)
 	}
 	return cs
+}
+
+func (cs *ConsensusState) SetDAGGraph(dag *dag.DAGGraph) {
+	cs.dag = dag
 }
 
 //----------------------------------------
@@ -1452,6 +1462,8 @@ func (cs *ConsensusState) finalizeCommit(height int64) {
 	// cs.StartTime is already set.
 	// Schedule Round0 to start soon.
 	cs.scheduleRound0(&cs.RoundState)
+
+	cs.Logger.Error("Edit: finalizeCommit")
 
 	// By here,
 	// * cs.Height has been increment to height+1
