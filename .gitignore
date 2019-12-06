@@ -1,3 +1,6 @@
+go.mod
+go.sum
+
 *.swp
 *.swo
 .bak

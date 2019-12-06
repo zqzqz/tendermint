@@ -15,6 +15,8 @@ import (
 	"github.com/tendermint/tendermint/state/txindex"
 	"github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
+
+	"github.com/tendermint/tendermint/dag"
 )
 
 const (
@@ -75,10 +77,18 @@ var (
 	eventBus         *types.EventBus // thread safe
 	mempool          mempl.Mempool
 
+	// Edit
+	dagGraph *dag.DAGGraph
+
 	logger log.Logger
 
 	config cfg.RPCConfig
 )
+
+// Edit
+func SetDAG(g *dag.DAGGraph) {
+	dagGraph = g
+}
 
 func SetStateDB(db dbm.DB) {
 	stateDB = db
