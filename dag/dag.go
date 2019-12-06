@@ -1,17 +1,18 @@
 package dag
 
 import (
-	"github.com/tendermint/tendermint/types"
-	"sort"
-	"math/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"math/rand"
+	"sort"
+
+	"github.com/tendermint/tendermint/types"
 )
 
 type DAGNode struct {
-	tx     types.Tx
-	hash   string
-	ref    []string// the ref for geneisus block is empty
+	tx   types.Tx
+	hash string
+	ref  []string // the ref for geneisus block is empty
 	//nounce uint32
 	thrpt int
 }
@@ -24,16 +25,16 @@ func (a DAGNodeList) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 type DAGGraph struct {
 	nodes     map[string]DAGNode // []byte cannot be a key?
-	confirmed map[string]bool  // check whether every node is confirmed
+	confirmed map[string]bool    // check whether every node is confirmed
 }
 
 func NewDAGGraph() *DAGGraph {
 	return &DAGGraph{}
 }
 
-func calHash(Node DAGNode) string{ //compute the hash of Node, include {tx, {ref}, thrpt}
+func calHash(Node DAGNode) string { //compute the hash of Node, include {tx, {ref}, thrpt}
 	record := string(Node.tx.Hash()) + string(Node.thrpt)
-	for _, preHash := range Node.ref{
+	for _, preHash := range Node.ref {
 		record += preHash
 	}
 	h := sha256.New()
@@ -47,7 +48,7 @@ func (graph *DAGGraph) calThrpt(Node DAGNode) int{ //use queue to enumerate one'
 	queue := []string{}
 	counter := map[string]int{}
 	queue = append(queue, Node.ref...)
-	for{
+	for {
 		counter[queue[0]] = 1
 		queue = queue[1:]
 		if len(queue) > 0{
@@ -84,12 +85,15 @@ func (graph *DAGGraph) AddTx(tx types.Tx) DAGNode {
 
 	newNode.thrpt = graph.calThrpt(newNode)
 	newNode.hash = calHash(newNode)
-	graph.nodes[newNode.hash] = newNode
 	// two references per node:
 	// One is the tip with highest priority
 	// another is a random tip (if any)
 
 	return newNode
+}
+
+func (graph *DAGGraph) AddNode(newNode DAGNode) {
+	graph.nodes[newNode.hash] = newNode
 }
 
 func (graph *DAGGraph) SelectTips() []DAGNode { //Sort current nodes according to their thrpt

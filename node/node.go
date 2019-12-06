@@ -204,7 +204,7 @@ type Node struct {
 	prometheusSrv    *http.Server
 
 	// Edit: DAG graph
-	dag *dag.DAGGraph
+	dagGraph *dag.DAGGraph
 }
 
 func initDBs(config *cfg.Config, dbProvider DBProvider) (blockStore *store.BlockStore, stateDB dbm.DB, err error) {
@@ -323,7 +323,7 @@ func onlyValidatorIsUs(state sm.State, privVal types.PrivValidator) bool {
 }
 
 func createMempoolAndMempoolReactor(config *cfg.Config, proxyApp proxy.AppConns,
-	state sm.State, memplMetrics *mempl.Metrics, logger log.Logger, dag *dag.DAGGraph) (*mempl.Reactor, *mempl.CListMempool) {
+	state sm.State, memplMetrics *mempl.Metrics, logger log.Logger, dagGraph *dag.DAGGraph) (*mempl.Reactor, *mempl.CListMempool) {
 
 	mempool := mempl.NewCListMempool(
 		config.Mempool,
@@ -337,7 +337,7 @@ func createMempoolAndMempoolReactor(config *cfg.Config, proxyApp proxy.AppConns,
 	mempoolReactor := mempl.NewReactor(config.Mempool, mempool)
 
 	// Edit
-	mempoolReactor.SetDAGGraph(dag)
+	mempoolReactor.SetDAGGraph(dagGraph)
 
 	mempoolReactor.SetLogger(mempoolLogger)
 
@@ -393,7 +393,7 @@ func createConsensusReactor(config *cfg.Config,
 	fastSync bool,
 	eventBus *types.EventBus,
 	consensusLogger log.Logger,
-	dag *dag.DAGGraph) (*consensus.ConsensusReactor, *consensus.ConsensusState) {
+	dagGraph *dag.DAGGraph) (*consensus.ConsensusReactor, *consensus.ConsensusState) {
 
 	consensusState := cs.NewConsensusState(
 		config.Consensus,
@@ -406,7 +406,7 @@ func createConsensusReactor(config *cfg.Config,
 	)
 
 	// Edit
-	consensusState.SetDAGGraph(dag)
+	consensusState.SetDAGGraph(dagGraph)
 
 	consensusState.SetLogger(consensusLogger)
 	if privValidator != nil {
@@ -574,7 +574,7 @@ func NewNode(config *cfg.Config,
 	options ...Option) (*Node, error) {
 
 	// Edit: init DAG
-	dag := dag.NewDAGGraph()
+	mydag := dag.NewDAGGraph()
 
 	blockStore, stateDB, err := initDBs(config, dbProvider)
 	if err != nil {
@@ -644,7 +644,7 @@ func NewNode(config *cfg.Config,
 	csMetrics, p2pMetrics, memplMetrics, smMetrics := metricsProvider(genDoc.ChainID)
 
 	// Make MempoolReactor
-	mempoolReactor, mempool := createMempoolAndMempoolReactor(config, proxyApp, state, memplMetrics, logger, dag)
+	mempoolReactor, mempool := createMempoolAndMempoolReactor(config, proxyApp, state, memplMetrics, logger, mydag)
 
 	// Make Evidence Reactor
 	evidenceReactor, evidencePool, err := createEvidenceReactor(config, dbProvider, stateDB, logger)
@@ -671,7 +671,7 @@ func NewNode(config *cfg.Config,
 	// Make ConsensusReactor
 	consensusReactor, consensusState := createConsensusReactor(
 		config, state, blockExec, blockStore, mempool, evidencePool,
-		privValidator, csMetrics, fastSync, eventBus, consensusLogger, dag,
+		privValidator, csMetrics, fastSync, eventBus, consensusLogger, mydag,
 	)
 
 	nodeInfo, err := makeNodeInfo(config, nodeKey, txIndexer, genDoc, state)
@@ -746,7 +746,7 @@ func NewNode(config *cfg.Config,
 		txIndexer:        txIndexer,
 		indexerService:   indexerService,
 		eventBus:         eventBus,
-		dag:              dag, // Edit
+		dagGraph:         mydag, // Edit
 	}
 	node.BaseService = *cmn.NewBaseService(logger, "Node", node)
 

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 	mempl "github.com/tendermint/tendermint/mempool"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
@@ -21,6 +20,8 @@ import (
 // CheckTx nor DeliverTx results.
 // More: https://tendermint.com/rpc/#/Tx/broadcast_tx_async
 func BroadcastTxAsync(ctx *rpctypes.Context, tx types.Tx) (*ctypes.ResultBroadcastTx, error) {
+	// tips := dagGraph.SelectTips()
+
 	err := mempool.CheckTx(tx, nil, mempl.TxInfo{})
 
 	if err != nil {
