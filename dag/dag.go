@@ -13,13 +13,13 @@ type DAGNode struct {
 	hash   string
 	ref    []string// the ref for geneisus block is empty
 	//nounce uint32
-	thrpt uint32
+	thrpt int
 }
 
 type DAGNodeList []DAGNode
 
 func (a DAGNodeList) Len() int           { return len(a) }
-func (a DAGNodeList) Less(i, j int) bool { return len(a[i].thrpt) > len(a[j].thrpt)}
+func (a DAGNodeList) Less(i, j int) bool { return a[i].thrpt > a[j].thrpt}
 func (a DAGNodeList) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 type DAGGraph struct {
@@ -43,20 +43,19 @@ func calHash(Node DAGNode) string{ //compute the hash of Node, include {tx, {ref
 }
 
 
-func (graph *DAGGraph) calThrpt(Node DAGNode) uint32{ //use queue to enumerate one's ancestors
-	queue := make([]string)
-	counter := make(map[string]uint32)
+func (graph *DAGGraph) calThrpt(Node DAGNode) int{ //use queue to enumerate one's ancestors
+	queue := []string{}
+	counter := map[string]int{}
 	queue = append(queue, Node.ref...)
 	for{
 		counter[queue[0]] = 1
 		queue = queue[1:]
-		if(len(queue)){
+		if len(queue) > 0{
 			newList := graph.nodes[queue[0]].ref
-			if(len(newList)){
+			if len(newList) > 0{
 				queue = append(queue, newList...)
 			}
-		}
-		else{
+		}else{
 			break
 		}
 	}
@@ -73,13 +72,11 @@ func (graph *DAGGraph) AddTx(tx types.Tx) DAGNode {
 	Ref1 := DNL[0]
 	newNode := DAGNode{}
 	newNode.tx = tx
-	if(len(DNL) <= 2){
+	if len(DNL) <= 2 {
 		newNode.ref = []string{Ref1.hash}
-	}
-	else{
+	}else{
 		idx := rand.Intn(len(DNL))
-		while(idx == 0){
-			idx = rand.Intn(len(DNL))
+		for ;idx == 0;idx = rand.Intn(len(DNL)){
 		}
 		Ref2 := DNL[idx]
 		newNode.ref = []string{Ref1.hash, Ref2.hash}
@@ -98,7 +95,7 @@ func (graph *DAGGraph) AddTx(tx types.Tx) DAGNode {
 func (graph *DAGGraph) SelectTips() []DAGNode { //Sort current nodes according to their thrpt
 	// return an array of DAGNodes with priority
 	// called when add new transactions and create consensus proposals
-	v := make([]DAGNode, DAGNode{}, len(graph.nodes))
+	v := []DAGNode{}
 	for _, value := range graph.nodes{
 		v = append(v, value)
 	}
@@ -107,30 +104,28 @@ func (graph *DAGGraph) SelectTips() []DAGNode { //Sort current nodes according t
 	return v
 }
 
-func (graph *DAGNode) Commit(hash string) {
+func (graph *DAGGraph) Commit(hash string) {
 	// Accept the hash of confirmed DAGNode from consensus;
 	// update DAG; update confirmed number for calculation of throughput
 	graph.confirmed[hash] = true
 }
 
-func (graph *DAGNode) IsValid(Node DAGNode) bool {
+func (graph *DAGGraph) IsValid(Node DAGNode) bool {
 	// check avaliability of parents: if parents of this node are not learned?
 	// ignore other sanity checks
-	queue := make([]string)
-	counter := make(map[string]uint32)
+	queue := []string{}
 	queue = append(queue, Node.ref...)
 	for{
-		if(!graph.confirmed[queue[0]]){
+		if graph.confirmed[queue[0]] == false {
 			return false
 		}
 		queue = queue[1:]
-		if(len(queue)){
+		if len(queue) > 0{
 			newList := graph.nodes[queue[0]].ref
-			if(len(newList)){
+			if len(newList) > 0{
 				queue = append(queue, newList...)
 			}
-		}
-		else{
+		}else{
 			break
 		}
 	}
