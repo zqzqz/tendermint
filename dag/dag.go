@@ -30,8 +30,8 @@ func calHash(Node DAGNode) string { //compute the hash of Node, include {tx, {re
 }
 
 func (graph *DAGGraph) calThrpt(Node DAGNode) uint32 { //use queue to enumerate one's ancestors
-	queue := make([]string, 0)
-	counter := make(map[string]uint32)
+	queue := []string{}
+	counter := map[string]int{}
 	queue = append(queue, Node.ref...)
 	for {
 		counter[queue[0]] = 1
@@ -62,8 +62,7 @@ func (graph *DAGGraph) AddTx(tx types.Tx) DAGNode {
 		newNode.ref = []string{Ref1.hash}
 	} else {
 		idx := rand.Intn(len(DNL))
-		for idx == 0 {
-			idx = rand.Intn(len(DNL))
+		for ; idx == 0; idx = rand.Intn(len(DNL)) {
 		}
 		Ref2 := DNL[idx]
 		newNode.ref = []string{Ref1.hash, Ref2.hash}
@@ -85,7 +84,7 @@ func (graph *DAGGraph) AddNode(newNode DAGNode) {
 func (graph *DAGGraph) SelectTips() []DAGNode { //Sort current nodes according to their thrpt
 	// return an array of DAGNodes with priority
 	// called when add new transactions and create consensus proposals
-	v := make([]DAGNode, len(graph.nodes))
+	v := []DAGNode{}
 	for _, value := range graph.nodes {
 		v = append(v, value)
 	}
@@ -103,10 +102,10 @@ func (graph *DAGGraph) Commit(hash string) {
 func (graph *DAGGraph) IsValid(Node DAGNode) bool {
 	// check avaliability of parents: if parents of this node are not learned?
 	// ignore other sanity checks
-	queue := make([]string, 0)
+	queue := []string{}
 	queue = append(queue, Node.ref...)
 	for {
-		if !graph.confirmed[queue[0]] {
+		if graph.confirmed[queue[0]] == false {
 			return false
 		}
 		queue = queue[1:]

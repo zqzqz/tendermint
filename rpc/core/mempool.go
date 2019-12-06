@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/tendermint/tendermint/dag"
+
 	"github.com/pkg/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
 	mempl "github.com/tendermint/tendermint/mempool"
@@ -21,13 +23,14 @@ import (
 // More: https://tendermint.com/rpc/#/Tx/broadcast_tx_async
 func BroadcastTxAsync(ctx *rpctypes.Context, tx types.Tx) (*ctypes.ResultBroadcastTx, error) {
 	newNode := dagGraph.AddTx(tx)
+	newTx := dag.NodeSerialize(newNode)
 
-	err := mempool.CheckTx(tx, nil, mempl.TxInfo{})
+	err := mempool.CheckTx(newTx, nil, mempl.TxInfo{})
 
 	if err != nil {
 		return nil, err
 	}
-	return &ctypes.ResultBroadcastTx{Hash: tx.Hash()}, nil
+	return &ctypes.ResultBroadcastTx{Hash: newTx.Hash()}, nil
 }
 
 // BroadcastTxSync returns with the response from CheckTx. Does not wait for
