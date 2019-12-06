@@ -22,8 +22,9 @@ import (
 // CheckTx nor DeliverTx results.
 // More: https://tendermint.com/rpc/#/Tx/broadcast_tx_async
 func BroadcastTxAsync(ctx *rpctypes.Context, tx types.Tx) (*ctypes.ResultBroadcastTx, error) {
+	fmt.Print("Edit: BroadcastTxAsync")
 	newNode := dagGraph.AddTx(tx)
-	newTx := dag.NodeSerialize(newNode)
+	newTx := types.Tx(dag.NodeSerialize(newNode))
 
 	err := mempool.CheckTx(newTx, nil, mempl.TxInfo{})
 

@@ -15,7 +15,10 @@ type DAGGraph struct {
 }
 
 func NewDAGGraph() *DAGGraph {
-	return &DAGGraph{}
+	graph := DAGGraph{}
+	graph.nodes = make(map[string]DAGNode)
+	graph.confirmed = make(map[string]bool)
+	return &graph
 }
 
 func calHash(Node DAGNode) string { //compute the hash of Node, include {tx, {ref}, thrpt}
@@ -52,27 +55,16 @@ func (graph *DAGGraph) calThrpt(Node DAGNode) uint32 { //use queue to enumerate 
 
 func (graph *DAGGraph) AddTx(tx types.Tx) DAGNode {
 	// Build a new DAGNode of incomming transaction
-	// Select optimal reference nodes using SelectTips
-	// Add the node to the graph
-	DNL := graph.SelectTips()
-	Ref1 := DNL[0]
 	newNode := DAGNode{}
 	newNode.tx = tx
-	if len(DNL) <= 2 {
-		newNode.ref = []string{Ref1.hash}
-	} else {
-		idx := rand.Intn(len(DNL))
-		for ; idx == 0; idx = rand.Intn(len(DNL)) {
-		}
-		Ref2 := DNL[idx]
-		newNode.ref = []string{Ref1.hash, Ref2.hash}
+
+	parents := graph.SelectTxParents()
+	for _, p := range parents {
+		newNode.ref = append(newNode.ref, p.hash)
 	}
 
 	newNode.thrpt = graph.calThrpt(newNode)
 	newNode.hash = calHash(newNode)
-	// two references per node:
-	// One is the tip with highest priority
-	// another is a random tip (if any)
 
 	return newNode
 }
@@ -93,10 +85,39 @@ func (graph *DAGGraph) SelectTips() []DAGNode { //Sort current nodes according t
 	return v
 }
 
-func (graph *DAGGraph) Commit(hash string) {
+func (graph *DAGGraph) SelectProposal() DAGNode {
+	candidates := graph.SelectTips()
+	if len(candidates) > 0 {
+		return candidates[0]
+	} else {
+		return DAGNode{}
+	}
+}
+
+func (graph *DAGGraph) SelectTxParents() []DAGNode {
+	// Select optimal reference nodes using SelectTips
+	// Add the node to the graph
+	candidates := graph.SelectTips()
+
+	// two references per node:
+	// One is the tip with highest priority
+	// another is a random tip (if any)
+	Ref1 := candidates[0]
+	if len(candidates) <= 2 {
+		return []DAGNode{Ref1}
+	} else {
+		idx := rand.Intn(len(candidates))
+		for ; idx == 0; idx = rand.Intn(len(candidates)) {
+		}
+		Ref2 := candidates[idx]
+		return []DAGNode{Ref1, Ref2}
+	}
+}
+
+func (graph *DAGGraph) Commit(node DAGNode) {
 	// Accept the hash of confirmed DAGNode from consensus;
 	// update DAG; update confirmed number for calculation of throughput
-	graph.confirmed[hash] = true
+	graph.confirmed[node.hash] = true
 }
 
 func (graph *DAGGraph) IsValid(Node DAGNode) bool {

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/tendermint/tendermint/dag"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/fail"
 	"github.com/tendermint/tendermint/libs/log"
@@ -37,6 +39,9 @@ type BlockExecutor struct {
 	logger log.Logger
 
 	metrics *Metrics
+
+	// Edit
+	dagGraph *dag.DAGGraph
 }
 
 type BlockExecutorOption func(executor *BlockExecutor)
@@ -74,6 +79,10 @@ func NewBlockExecutor(
 	return res
 }
 
+func (blockExec *BlockExecutor) SetDAGGraph(dagGraph *dag.DAGGraph) {
+	blockExec.dagGraph = dagGraph
+}
+
 func (blockExec *BlockExecutor) DB() dbm.DB {
 	return blockExec.db
 }
@@ -94,18 +103,20 @@ func (blockExec *BlockExecutor) CreateProposalBlock(
 	proposerAddr []byte,
 ) (*types.Block, *types.PartSet) {
 
-	blockExec.logger.Error("Edit: CreateProposalBlock")
-
 	maxBytes := state.ConsensusParams.Block.MaxBytes
-	maxGas := state.ConsensusParams.Block.MaxGas
+	// maxGas := state.ConsensusParams.Block.MaxGas
 
 	// Fetch a limited amount of valid evidence
 	maxNumEvidence, _ := types.MaxEvidencePerBlock(maxBytes)
 	evidence := blockExec.evpool.PendingEvidence(maxNumEvidence)
 
 	// Fetch a limited amount of valid txs
-	maxDataBytes := types.MaxDataBytes(maxBytes, state.Validators.Size(), len(evidence))
-	txs := blockExec.mempool.ReapMaxBytesMaxGas(maxDataBytes, maxGas)
+	// maxDataBytes := types.MaxDataBytes(maxBytes, state.Validators.Size(), len(evidence))
+
+	blockExec.logger.Error("Edit: CreateProposalBlock")
+	// txs := blockExec.mempool.ReapMaxBytesMaxGas(maxDataBytes, maxGas)
+	tip := blockExec.dagGraph.SelectProposal()
+	txs := types.Txs{types.Tx(dag.NodeSerialize(tip))}
 
 	return state.MakeBlock(height, txs, commit, evidence, proposerAddr)
 }

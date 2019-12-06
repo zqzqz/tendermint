@@ -138,7 +138,7 @@ type ConsensusState struct {
 	metrics *Metrics
 
 	// Edit
-	dag *dag.DAGGraph
+	dagGraph *dag.DAGGraph
 }
 
 // StateOption sets an optional parameter on the ConsensusState.
@@ -187,8 +187,8 @@ func NewConsensusState(
 	return cs
 }
 
-func (cs *ConsensusState) SetDAGGraph(dag *dag.DAGGraph) {
-	cs.dag = dag
+func (cs *ConsensusState) SetDAGGraph(dagGraph *dag.DAGGraph) {
+	cs.dagGraph = dagGraph
 }
 
 //----------------------------------------
@@ -1462,7 +1462,12 @@ func (cs *ConsensusState) finalizeCommit(height int64) {
 	cs.scheduleRound0(&cs.RoundState)
 
 	cs.Logger.Error("Edit: finalizeCommit")
-
+	tipTxs := block.Data.Txs
+	if len(tipTxs) == 1 {
+		tipTx := tipTxs[0]
+		confirmedNode := dag.NodeDeserialize(tipTx)
+		cs.dagGraph.Commit(confirmedNode)
+	}
 	// By here,
 	// * cs.Height has been increment to height+1
 	// * cs.Step is now cstypes.RoundStepNewHeight

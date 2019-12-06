@@ -38,10 +38,10 @@ const (
 // peers you received it from.
 type Reactor struct {
 	p2p.BaseReactor
-	config  *cfg.MempoolConfig
-	mempool *CListMempool
-	ids     *mempoolIDs
-	dag     *dag.DAGGraph
+	config   *cfg.MempoolConfig
+	mempool  *CListMempool
+	ids      *mempoolIDs
+	dagGraph *dag.DAGGraph
 }
 
 type mempoolIDs struct {
@@ -119,8 +119,8 @@ func NewReactor(config *cfg.MempoolConfig, mempool *CListMempool) *Reactor {
 }
 
 // Edit
-func (memR *Reactor) SetDAGGraph(dag *dag.DAGGraph) {
-	memR.dag = dag
+func (memR *Reactor) SetDAGGraph(dagGraph *dag.DAGGraph) {
+	memR.dagGraph = dagGraph
 }
 
 // SetLogger sets the Logger on the reactor and the underlying mempool.
@@ -180,6 +180,8 @@ func (memR *Reactor) Receive(chID byte, src p2p.Peer, msgBytes []byte) {
 		}
 
 		memR.Logger.Error("Edit: Receive Tx Message")
+		newNode := dag.NodeDeserialize(msg.Tx)
+		memR.dagGraph.AddNode(newNode)
 
 		err := memR.mempool.CheckTx(msg.Tx, nil, txInfo)
 		if err != nil {

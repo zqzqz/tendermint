@@ -662,6 +662,9 @@ func NewNode(config *cfg.Config,
 		sm.BlockExecutorWithMetrics(smMetrics),
 	)
 
+	// Edit
+	blockExec.SetDAGGraph(mydag)
+
 	// Make BlockchainReactor
 	bcReactor, err := createBlockchainReactor(config, state, blockExec, blockStore, fastSync, logger)
 	if err != nil {
