@@ -4,20 +4,26 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"math/rand"
-	"sort"
-
+	"fmt"
 	"github.com/tendermint/tendermint/types"
 )
 
 type DAGGraph struct {
 	nodes     map[string]DAGNode // []byte cannot be a key?
 	confirmed map[string]bool    // check whether every node is confirmed
+	is_tip map[string]bool
+	cache map[string]DAGNode
 }
 
 func NewDAGGraph() *DAGGraph {
 	graph := DAGGraph{}
 	graph.nodes = make(map[string]DAGNode)
 	graph.confirmed = make(map[string]bool)
+	genesis := DAGNode{}
+	genesis.thrpt = 0
+	genesis.hash = calHash(genesis)
+	graph.nodes[genesis.hash] = genesis
+	graph.is_tip[genesis.hash] = true
 	return &graph
 }
 
@@ -32,24 +38,28 @@ func calHash(Node DAGNode) string { //compute the hash of Node, include {tx, {re
 	return hex.EncodeToString(hashed)
 }
 
-func (graph *DAGGraph) calThrpt(Node DAGNode) uint32 { //use queue to enumerate one's ancestors
-	queue := []string{}
+func (graph *DAGGraph) calThrpt(Node DAGNode) int { //use queue to enumerate one's ancestors
+	queue := []string{Node.hash}
 	counter := map[string]int{}
-	queue = append(queue, Node.ref...)
 	for {
-		counter[queue[0]] = 1
-		queue = queue[1:]
 		if len(queue) > 0 {
+			counter[queue[0]] = 1
 			newList := graph.nodes[queue[0]].ref
-			if len(newList) > 0 {
-				queue = append(queue, newList...)
+			for _, n := range newList{
+				if graph.confirmed[n] == true{
+					_, ok := counter[n]
+					if ok == false{
+						queue = append(queue, n)
+					}
+				}
 			}
+			queue = queue[1:]
 		} else {
 			break
 		}
 	}
 
-	return uint32(len(counter))
+	return len(counter)
 
 }
 
@@ -57,12 +67,6 @@ func (graph *DAGGraph) AddTx(tx types.Tx) DAGNode {
 	// Build a new DAGNode of incomming transaction
 	newNode := DAGNode{}
 	newNode.tx = tx
-
-	parents := graph.SelectTxParents()
-	for _, p := range parents {
-		newNode.ref = append(newNode.ref, p.hash)
-	}
-
 	newNode.thrpt = graph.calThrpt(newNode)
 	newNode.hash = calHash(newNode)
 
@@ -71,18 +75,53 @@ func (graph *DAGGraph) AddTx(tx types.Tx) DAGNode {
 
 func (graph *DAGGraph) AddNode(newNode DAGNode) {
 	graph.nodes[newNode.hash] = newNode
+	graph.is_tip[newNode.hash] = true
+	for h, Node := range graph.cache{
+		flag := true
+		parents := Node.ref
+		for _, p := range parents{
+			_, ok := graph.nodes[p]
+			if ok == false{
+				flag = false
+			}
+		}
+		if flag == true{
+			delete(graph.cache, h)
+			graph.nodes[Node.hash] = Node
+			graph.is_tip[Node.hash] = true
+			for _, p := range parents{
+				_, ok := graph.is_tip[p]
+				if ok == true{
+					delete(graph.is_tip, p)
+				}
+			}
+		}
+	}
+
 }
 
 func (graph *DAGGraph) SelectTips() []DAGNode { //Sort current nodes according to their thrpt
 	// return an array of DAGNodes with priority
 	// called when add new transactions and create consensus proposals
+	res := []DAGNode{}
 	v := []DAGNode{}
-	for _, value := range graph.nodes {
-		v = append(v, value)
+	max_tip := DAGNode{}
+	k := -1
+	for value, _ := range graph.is_tip {
+		v = append(v, graph.nodes[value])
+		if graph.nodes[value].thrpt > k{
+			max_tip = graph.nodes[value]
+			k = graph.nodes[value].thrpt
+		}
 	}
-	sort.Sort(DAGNodeList(v))
+	res = append(res, max_tip)
+	for _, value := range v{
+		if value.hash != max_tip.hash{
+			res = append(res, value)
+		}
+	}
 	// The more dag nodes are (indirectly) referred by the tip, the higher priority the tip is.
-	return v
+	return res
 }
 
 func (graph *DAGGraph) SelectProposal() DAGNode {
@@ -102,10 +141,10 @@ func (graph *DAGGraph) SelectTxParents() []DAGNode {
 	// two references per node:
 	// One is the tip with highest priority
 	// another is a random tip (if any)
-	Ref1 := candidates[0]
-	if len(candidates) <= 2 {
-		return []DAGNode{Ref1}
+	if len(candidates) <= 1 {
+		return candidates
 	} else {
+		Ref1 := candidates[0]
 		idx := rand.Intn(len(candidates))
 		for ; idx == 0; idx = rand.Intn(len(candidates)) {
 		}
@@ -118,25 +157,19 @@ func (graph *DAGGraph) Commit(node DAGNode) {
 	// Accept the hash of confirmed DAGNode from consensus;
 	// update DAG; update confirmed number for calculation of throughput
 	graph.confirmed[node.hash] = true
+	fmt.Println("Current graph throughput:")
+	fmt.Println(len(graph.confirmed))
 }
 
 func (graph *DAGGraph) IsValid(Node DAGNode) bool {
 	// check avaliability of parents: if parents of this node are not learned?
 	// ignore other sanity checks
-	queue := []string{}
-	queue = append(queue, Node.ref...)
-	for {
-		if graph.confirmed[queue[0]] == false {
+	parents := Node.ref
+	for _, p := range parents{
+		_, ok := graph.nodes[p]
+		if ok == false{
+			graph.cache[Node.hash] = Node
 			return false
-		}
-		queue = queue[1:]
-		if len(queue) > 0 {
-			newList := graph.nodes[queue[0]].ref
-			if len(newList) > 0 {
-				queue = append(queue, newList...)
-			}
-		} else {
-			break
 		}
 	}
 	return true
