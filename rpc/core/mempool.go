@@ -25,6 +25,7 @@ func BroadcastTxAsync(ctx *rpctypes.Context, tx types.Tx) (*ctypes.ResultBroadca
 	fmt.Print("Edit: BroadcastTxAsync")
 	newNode := dagGraph.AddTx(tx)
 	newTx := types.Tx(dag.NodeSerialize(newNode))
+	dagGraph.AddNode(newNode)
 
 	err := mempool.CheckTx(newTx, nil, mempl.TxInfo{})
 

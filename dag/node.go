@@ -2,6 +2,7 @@ package dag
 
 import (
 	"bytes"
+
 	"github.com/tendermint/tendermint/types"
 )
 
@@ -13,15 +14,14 @@ type DAGNode struct {
 	thrpt int
 }
 
-
 func NodeSerialize(node DAGNode) []byte {
-	split := byte('#')
+	split := []byte("###split###")
 	res := []byte{}
 	res = append(res, node.tx...)
-	res = append(res, split)
+	res = append(res, split...)
 	res = append(res, []byte(node.hash)...)
 	for _, r := range node.ref {
-		res = append(res, split)
+		res = append(res, split...)
 		res = append(res, []byte(r)...)
 	}
 	return res
@@ -29,7 +29,7 @@ func NodeSerialize(node DAGNode) []byte {
 
 func NodeDeserialize(txBytes []byte) DAGNode {
 	node := DAGNode{}
-	tokens := bytes.Split(txBytes, []byte("#"))
+	tokens := bytes.Split(txBytes, []byte("###split###"))
 	for index, token := range tokens {
 		if index == 0 {
 			node.tx = token
