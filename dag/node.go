@@ -2,7 +2,6 @@ package dag
 
 import (
 	"bytes"
-
 	"github.com/tendermint/tendermint/types"
 )
 
@@ -11,14 +10,9 @@ type DAGNode struct {
 	hash string
 	ref  []string // the ref for geneisus block is empty
 	//nounce uint32
-	thrpt uint32
+	thrpt int
 }
 
-type DAGNodeList []DAGNode
-
-func (a DAGNodeList) Len() int           { return len(a) }
-func (a DAGNodeList) Less(i, j int) bool { return a[i].thrpt > a[j].thrpt }
-func (a DAGNodeList) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 func NodeSerialize(node DAGNode) []byte {
 	split := byte('#')
