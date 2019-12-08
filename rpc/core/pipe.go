@@ -86,7 +86,7 @@ var (
 )
 
 // Edit
-func SetDAG(g *dag.DAGGraph) {
+func SetDAGGraph(g *dag.DAGGraph) {
 	dagGraph = g
 }
 
