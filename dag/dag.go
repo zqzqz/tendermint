@@ -5,16 +5,18 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/rand"
+	"sync"
 
 	"github.com/tendermint/tendermint/types"
 )
 
 type DAGGraph struct {
-	nodes     map[string]DAGNode // []byte cannot be a key?
-	confirmed map[string]bool    // check whether every node is confirmed
-	is_tip    map[string]bool
-	cache     map[string]DAGNode
+	nodes          map[string]DAGNode // []byte cannot be a key?
+	confirmed      map[string]bool    // check whether every node is confirmed
+	is_tip         map[string]bool
+	cache          map[string]DAGNode
 	pendingCommits map[string]DAGNode
+	mux            sync.Mutex
 }
 
 func NewDAGGraph() *DAGGraph {
@@ -47,9 +49,11 @@ func calHash(Node DAGNode) string { //compute the hash of Node, include {tx, {re
 func (graph *DAGGraph) calThrpt(Node DAGNode) int { //use queue to enumerate one's ancestors
 	queue := []string{Node.hash}
 	counter := map[string]int{}
+
 	for {
 		if len(queue) > 0 {
 			counter[queue[0]] = 1
+			graph.mux.Lock()
 			newList := graph.nodes[queue[0]].ref
 			for _, n := range newList {
 				if graph.confirmed[n] == false {
@@ -59,6 +63,7 @@ func (graph *DAGGraph) calThrpt(Node DAGNode) int { //use queue to enumerate one
 					}
 				}
 			}
+			graph.mux.Unlock()
 			queue = queue[1:]
 		} else {
 			break
@@ -88,23 +93,33 @@ func (graph *DAGGraph) AddNode(newNode DAGNode) {
 	}
 	valid := graph.IsValid(newNode)
 	if !valid {
+		graph.mux.Lock()
 		graph.cache[newNode.hash] = newNode
-		return;
+		graph.mux.Unlock()
+		return
 	}
 
+	graph.mux.Lock()
 	graph.nodes[newNode.hash] = newNode
+	graph.is_tip[newNode.hash] = true
+	graph.mux.Unlock()
+
 	if _, pending := graph.pendingCommits[newNode.hash]; pending {
+		graph.mux.Lock()
 		delete(graph.pendingCommits, newNode.hash)
+		graph.mux.Unlock()
 		graph.Commit(newNode)
 	}
-	graph.is_tip[newNode.hash] = true
+
 	queue := make([]string, 0)
 	for _, ref := range newNode.ref {
 		queue = append(queue, ref)
 	}
 	counter := map[string]int{}
+
 	for len(queue) > 0 {
 		counter[queue[0]] = 1
+		graph.mux.Lock()
 		graph.is_tip[queue[0]] = false
 		newList := graph.nodes[queue[0]].ref
 		for _, n := range newList {
@@ -115,8 +130,11 @@ func (graph *DAGGraph) AddNode(newNode DAGNode) {
 				}
 			}
 		}
+		graph.mux.Unlock()
 		queue = queue[1:]
 	}
+
+	graph.mux.Lock()
 	for h, Node := range graph.cache {
 		flag := graph.IsValid(Node)
 		if flag == true {
@@ -135,6 +153,7 @@ func (graph *DAGGraph) AddNode(newNode DAGNode) {
 			}
 		}
 	}
+	graph.mux.Unlock()
 }
 
 func (graph *DAGGraph) SelectTips() []DAGNode { //Sort current nodes according to their thrpt
@@ -144,6 +163,7 @@ func (graph *DAGGraph) SelectTips() []DAGNode { //Sort current nodes according t
 	v := []DAGNode{}
 	max_tip := DAGNode{}
 	k := -1
+	graph.mux.Lock()
 	for value, flag := range graph.is_tip {
 		if flag {
 			v = append(v, graph.nodes[value])
@@ -153,6 +173,7 @@ func (graph *DAGGraph) SelectTips() []DAGNode { //Sort current nodes according t
 			}
 		}
 	}
+	graph.mux.Unlock()
 	res = append(res, max_tip)
 	for _, value := range v {
 		if value.hash != max_tip.hash {
@@ -204,6 +225,7 @@ func (graph *DAGGraph) Commit(node DAGNode) {
 	counter := map[string]int{}
 	for len(queue) > 0 {
 		counter[queue[0]] = 1
+		graph.mux.Lock()
 		graph.confirmed[queue[0]] = true
 		newList := graph.nodes[queue[0]].ref
 		for _, n := range newList {
@@ -214,6 +236,7 @@ func (graph *DAGGraph) Commit(node DAGNode) {
 				}
 			}
 		}
+		graph.mux.Unlock()
 		queue = queue[1:]
 	}
 	fmt.Printf("Current graph throughput: %d\n", len(graph.confirmed))
@@ -223,11 +246,13 @@ func (graph *DAGGraph) IsValid(Node DAGNode) bool {
 	// check avaliability of parents: if parents of this node are not learned?
 	// ignore other sanity checks
 	parents := Node.ref
+	graph.mux.Lock()
 	for _, p := range parents {
 		_, ok := graph.nodes[p]
 		if ok == false {
 			return false
 		}
 	}
+	graph.mux.Unlock()
 	return true
 }

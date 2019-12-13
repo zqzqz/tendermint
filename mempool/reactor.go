@@ -183,10 +183,10 @@ func (memR *Reactor) Receive(chID byte, src p2p.Peer, msgBytes []byte) {
 		newNode := dag.NodeDeserialize(msg.Tx)
 		memR.dagGraph.AddNode(newNode)
 
-		err := memR.mempool.CheckTx(msg.Tx, nil, txInfo)
-		if err != nil {
-			memR.Logger.Info("Could not check tx", "tx", txID(msg.Tx), "err", err)
-		}
+		// err := memR.mempool.CheckTx(msg.Tx, nil, txInfo)
+		// if err != nil {
+		// 	memR.Logger.Info("Could not check tx", "tx", txID(msg.Tx), "err", err)
+		// }
 		// broadcasting happens from go routines per peer
 	default:
 		memR.Logger.Error(fmt.Sprintf("Unknown message type %v", reflect.TypeOf(msg)))

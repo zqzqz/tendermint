@@ -27,11 +27,11 @@ func BroadcastTxAsync(ctx *rpctypes.Context, tx types.Tx) (*ctypes.ResultBroadca
 	newTx := types.Tx(dag.NodeSerialize(newNode))
 	dagGraph.AddNode(newNode)
 
-	err := mempool.CheckTx(newTx, nil, mempl.TxInfo{})
+	// err := mempool.CheckTx(newTx, nil, mempl.TxInfo{})
 
-	if err != nil {
-		return nil, err
-	}
+	// if err != nil {
+	// 	return nil, err
+	// }
 	return &ctypes.ResultBroadcastTx{Hash: newTx.Hash()}, nil
 }
 
