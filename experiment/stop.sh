@@ -4,7 +4,7 @@ IP_FILE=${DIR}/aws/ips.list
 source ${DIR}/config.sh
 RESULT_DIR=${DIR}/results
 
-bash ${DIR}/utils/server_cmd.sh $IP_FILE 'pkill /home/ubuntu/go/bin/tendermint'
+bash ${DIR}/utils/server_cmd.sh $IP_FILE 'pkill tendermint'
 
 IPS=$(cat $IP_FILE)
 
