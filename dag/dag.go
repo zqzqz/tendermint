@@ -14,6 +14,7 @@ type DAGGraph struct {
 	confirmed map[string]bool    // check whether every node is confirmed
 	is_tip    map[string]bool
 	cache     map[string]DAGNode
+	pendingCommits map[string]DAGNode
 }
 
 func NewDAGGraph() *DAGGraph {
@@ -22,6 +23,7 @@ func NewDAGGraph() *DAGGraph {
 	graph.confirmed = make(map[string]bool)
 	graph.is_tip = make(map[string]bool)
 	graph.cache = make(map[string]DAGNode)
+	graph.pendingCommits = make(map[string]DAGNode)
 	genesis := DAGNode{}
 	genesis.thrpt = 0
 	genesis.hash = calHash(genesis)
@@ -84,7 +86,17 @@ func (graph *DAGGraph) AddNode(newNode DAGNode) {
 	if _, ok := graph.nodes[newNode.hash]; ok {
 		return
 	}
+	valid := graph.IsValid(newNode)
+	if !valid {
+		graph.cache[newNode.hash] = newNode
+		return;
+	}
+
 	graph.nodes[newNode.hash] = newNode
+	if _, pending := graph.pendingCommits[newNode.hash]; pending {
+		delete(graph.pendingCommits, newNode.hash)
+		graph.Commit(newNode)
+	}
 	graph.is_tip[newNode.hash] = true
 	queue := make([]string, 0)
 	for _, ref := range newNode.ref {
@@ -106,19 +118,16 @@ func (graph *DAGGraph) AddNode(newNode DAGNode) {
 		queue = queue[1:]
 	}
 	for h, Node := range graph.cache {
-		flag := true
-		parents := Node.ref
-		for _, p := range parents {
-			_, ok := graph.nodes[p]
-			if ok == false {
-				flag = false
-			}
-		}
+		flag := graph.IsValid(Node)
 		if flag == true {
 			delete(graph.cache, h)
 			graph.nodes[Node.hash] = Node
+			if _, pending := graph.pendingCommits[Node.hash]; pending {
+				delete(graph.pendingCommits, Node.hash)
+				graph.Commit(Node)
+			}
 			graph.is_tip[Node.hash] = true
-			for _, p := range parents {
+			for _, p := range Node.ref {
 				_, ok := graph.is_tip[p]
 				if ok == true {
 					delete(graph.is_tip, p)
@@ -126,7 +135,6 @@ func (graph *DAGGraph) AddNode(newNode DAGNode) {
 			}
 		}
 	}
-
 }
 
 func (graph *DAGGraph) SelectTips() []DAGNode { //Sort current nodes according to their thrpt
@@ -187,6 +195,11 @@ func (graph *DAGGraph) SelectTxParents() []DAGNode {
 func (graph *DAGGraph) Commit(node DAGNode) {
 	// Accept the hash of confirmed DAGNode from consensus;
 	// update DAG; update confirmed number for calculation of throughput
+	if _, ok := graph.nodes[node.hash]; !ok {
+		graph.pendingCommits[node.hash] = node
+		return
+	}
+
 	queue := []string{node.hash}
 	counter := map[string]int{}
 	for len(queue) > 0 {
@@ -213,7 +226,6 @@ func (graph *DAGGraph) IsValid(Node DAGNode) bool {
 	for _, p := range parents {
 		_, ok := graph.nodes[p]
 		if ok == false {
-			graph.cache[Node.hash] = Node
 			return false
 		}
 	}

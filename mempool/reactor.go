@@ -179,7 +179,7 @@ func (memR *Reactor) Receive(chID byte, src p2p.Peer, msgBytes []byte) {
 			txInfo.SenderP2PID = src.ID()
 		}
 
-		memR.Logger.Error("Edit: Receive Tx Message")
+		// memR.Logger.Error("Edit: Receive Tx Message")
 		newNode := dag.NodeDeserialize(msg.Tx)
 		memR.dagGraph.AddNode(newNode)
 

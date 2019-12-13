@@ -5,4 +5,5 @@ nohup /home/ubuntu/go/bin/tendermint node --proxy_app=kvstore --trace 2>&1 > ~/.
 echo "started"
 timeout 300 bash ${DIR}/send_transaction.sh
 pkill tendermint
+echo "finished"
 exit 0

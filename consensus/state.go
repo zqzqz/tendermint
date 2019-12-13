@@ -1461,7 +1461,7 @@ func (cs *ConsensusState) finalizeCommit(height int64) {
 	// Schedule Round0 to start soon.
 	cs.scheduleRound0(&cs.RoundState)
 
-	cs.Logger.Error("Edit: finalizeCommit")
+	// cs.Logger.Error("Edit: finalizeCommit")
 	tipTxs := block.Data.Txs
 	if len(tipTxs) == 1 {
 		tipTx := tipTxs[0]

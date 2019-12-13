@@ -113,7 +113,7 @@ func (blockExec *BlockExecutor) CreateProposalBlock(
 	// Fetch a limited amount of valid txs
 	// maxDataBytes := types.MaxDataBytes(maxBytes, state.Validators.Size(), len(evidence))
 
-	blockExec.logger.Error("Edit: CreateProposalBlock")
+	// blockExec.logger.Error("Edit: CreateProposalBlock")
 	// txs := blockExec.mempool.ReapMaxBytesMaxGas(maxDataBytes, maxGas)
 	tip := blockExec.dagGraph.SelectProposal()
 	txs := types.Txs{types.Tx(dag.NodeSerialize(tip))}
