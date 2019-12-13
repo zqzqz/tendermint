@@ -1,8 +1,10 @@
 #!/bin/bash
 
-SECURITY_GROUP="sg-6dbfea02"
+SECURITY_GROUP="sg-daa923a1"
 INSTANCE_TYPE="t2.micro"
-KEY_NAME="ubuntu3"
+KEY_NAME="ubuntu2"
+IMAGE_ID="ami-0dbf5ea29a7fc7e05"
+REGION="us-west-1"
 
 DIR=$(dirname $0)
 CMD=$1
@@ -12,10 +14,7 @@ if [ "$CMD" = "list" ]; then
     aws ec2 describe-instances --instance-ids $INSTANCE_IDS --query 'Reservations[*].Instances[*].PublicIpAddress' | grep -oE "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*" > ${DIR}/ips.list
 elif [ "$CMD" = "launch" ]; then
     INSTANCE_COUNT=$2
-    REGION="us-east-2"
-    echo "region $REGION"
-    INSTANCE_COUNT=$INSTANCE_COUNT
-    INSTANCE_IDS=$(aws ec2 run-instances --count $INSTANCE_COUNT --instance-type ${INSTANCE_TYPE} --image-id ami-0b37e9efc396e4c38  --key-name ${KEY_NAME} --query 'Instances[*].InstanceId' | grep -oE 'i-[0-9a-z]+')
+    INSTANCE_IDS=$(aws ec2 run-instances --count $INSTANCE_COUNT --instance-type ${INSTANCE_TYPE} --image-id ${IMAGE_ID}  --key-name ${KEY_NAME} --query 'Instances[*].InstanceId' | grep -oE 'i-[0-9a-z]+')
     echo $INSTANCE_IDS
     for id in $INSTANCE_IDS
     do

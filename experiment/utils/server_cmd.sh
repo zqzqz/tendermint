@@ -4,7 +4,7 @@ IP_FILE=$1
 CMD=$2
 
 DIR=$(dirname $0)
-source ${DIR}/config.sh
+source ${DIR}/../config.sh
 
 IPS=$(cat $IP_FILE)
 
